@@ -1,12 +1,18 @@
-import pygame as pg
-pg.init()
+from pygame import *
+from random import randint
+
+img_back = "galaxy.jpg"
+img_hero = "rocket.png"
+img_enemy = "ufo.png"
 
 
-class GameSprite(pg.sprite.Sprite):
-    def __init__(self, player_image, player_x, player_y, player_speed):
-        super().__init__()
-        self.image = pg.transform.scale(pg.image.load(player_image), (65, 65))
+class GameSprite(sprite.Sprite):
+    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
+        sprite.Sprite.__init__(self)
+
+        self.image = transform.scale(image.load(player_image), (size_x, size_y))
         self.speed = player_speed
+
         self.rect = self.image.get_rect()
         self.rect.x = player_x
         self.rect.y = player_y
@@ -16,32 +22,65 @@ class GameSprite(pg.sprite.Sprite):
 
 
 class Player(GameSprite):
-    def move(self):
-        keys = pg.key.get_pressed()
-        if keys[pg.K_LEFT] and self.rect.x > 5:
+    def update(self):
+        keys = key.get_pressed()
+        if keys[K_LEFT] and self.rect.x > 5:
             self.rect.x -= self.speed
-        elif keys[pg.K_RIGHT] and self.rect.x < 630:
+        if keys[K_RIGHT] and self.rect.x < win_width - 80:
             self.rect.x += self.speed
 
+    def fire(self):
+        pass
 
-window = pg.display.set_mode((700, 500))
-background = pg.transform.scale(pg.image.load('galaxy.jpg'), (700, 500))
 
-clock = pg.time.Clock()
+lost = 0
 
-game = True
 
-player = Player("rocket.png", 300, 430, 10)
+class Enemy(GameSprite):
+    def update(self):
+        global lost
+        self.rect.y += self.speed
+        if self.rect.y > win_height:
+            self.rect.x = randint(80, win_width - 80)
+            self.rect.y = 0
+            lost += 1
 
-while game:
-    for _ in pg.event.get():
-        if _.type == pg.QUIT:
-            game = False
 
-    window.blit(background, (0, 0))
+win_width = 700
+win_height = 500
+display.set_caption("Shooter")
+window = display.set_mode((win_width, win_height))
+background = transform.scale(image.load(img_back), (win_width, win_height))
 
-    player.reset()
-    player.move()
+ship = Player(img_hero, 5, win_height - 100, 80, 100, 10)
+mixer.init()
+mixer.music.load("space.ogg")
+mixer.music.play()
 
-    pg.display.update()
-    clock.tick(60)
+font.init()
+font1 = font.Font(None, 30)
+counter = font1.render("Пропущено врагов: " + str(lost), True, (230, 45, 98))
+
+monsters = sprite.Group()
+for i in range(1, 6):
+    monster = Enemy(img_enemy, randint(80, win_width - 80), -40, 80, 50, randint(1, 5))
+    monsters.add(monster)
+
+finish = False
+run = True
+while run:
+    for e in event.get():
+        if e.type == QUIT:
+            run = False
+
+    if not finish:
+        window.blit(background, (0, 0))
+        ship.update()
+        monsters.update()
+
+        ship.reset()
+        monsters.draw(window)
+        counter = font1.render("Пропущено врагов: " + str(lost), True, (230, 45, 98))
+        window.blit(counter, (50, 30))
+        display.update()
+    time.delay(50)
